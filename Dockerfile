@@ -30,6 +30,8 @@ ENV DATASERVICES_VERSION=master
 ENV DATAERVICESAPI_VERSION=master
 #ENV OBSERVATORY_VERSION=1.9.0
 ENV OBSERVATORY_VERSION=master
+# Added for httpd production setup
+ENV RAILS_ENV=production
 
 RUN useradd -m -d /home/cartodb -s /bin/bash cartodb && \
   apt-get install -y -q \
@@ -211,6 +213,32 @@ RUN cd / && git clone --recursive https://github.com/CartoDB/observatory-extensi
   cd observatory-extension && \
   git checkout $OBSERVATORY_VERSION && \
   PGUSER=postgres make deploy
+
+# Install httpd for production
+RUN apt-get install -y -q apache2
+
+# Install certbot for HTTPS support, instructions here: https://certbot.eff.org/lets-encrypt/ubuntubionic-apache
+RUN apt-get update && \
+  apt-get install -y -q software-properties-common && \
+  add-apt-repository universe && \
+  add-apt-repository ppa:certbot/certbot && \
+  apt-get update && \
+  apt-get install -y -q certbot python-certbot-apache && \
+  certbot --apache
+    
+# Install phusion passenger, taken from https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/ownserver/apache/oss/bionic/install_passenger.html
+# Add our APT repository
+RUN sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger bionic main > /etc/apt/sources.list.d/passenger.list' && \
+  apt-get update
+
+# Install Passenger + Apache module
+RUN apt-get install -y -q libapache2-mod-passenger
+
+# Enable the Passenger Apache module and restart Apache
+RUN a2enmod passenger && \
+  apache2ctl restart
+
+# End production httpd additions
 
 # Copy confs
 ADD ./config/CartoDB-dev.js \
