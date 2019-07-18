@@ -215,30 +215,33 @@ RUN cd / && git clone --recursive https://github.com/CartoDB/observatory-extensi
   git checkout $OBSERVATORY_VERSION && \
   PGUSER=postgres make deploy
 
-# Install httpd for production
-RUN apt-get install -y -q apache2
+# Start production httpd additions, working here with nginx and passenger
 
-# Install certbot for HTTPS support, instructions here: https://certbot.eff.org/lets-encrypt/ubuntubionic-apache
-RUN apt-get update && \
-  apt-get install -y -q software-properties-common && \
-  add-apt-repository universe && \
-  add-apt-repository ppa:certbot/certbot && \
-  apt-get update && \
-  apt-get install -y -q certbot python-certbot-apache && \
-  certbot --apache
+# Install httpd for production
+RUN apt-get install -y -q nginx
+
+# Working with self-signed certificates here as https certs are hosted at the edge router for our enterprise
+RUN apt-get install -y dirmngr gnupg && \
+  apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7 && \
+  apt-get install -y apt-transport-https ca-certificates
     
-# Install phusion passenger, taken from https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/ownserver/apache/oss/bionic/install_passenger.html
-# Add our APT repository
+# Install phusion passenger, taken from https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/ownserver/nginx/oss/bionic/install_passenger.html
+# Add Phusion APT repository
 RUN sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger bionic main > /etc/apt/sources.list.d/passenger.list' && \
   apt-get update
 
-# Install Passenger + Apache module
-RUN apt-get install -y -q libapache2-mod-passenger
+# Install Passenger + NGINX module
+RUN apt-get install -y -q libnginx-mod-http-passenger
 
-# Enable the Passenger Apache module and restart Apache
+# Confirm installation (not sure this is necessary for Dockerfile)
+RUN if [ ! -f /etc/nginx/modules-enabled/50-mod-http-passenger.conf ]; then ln -s /usr/share/nginx/modules-available/mod-http-passenger.load /etc/nginx/modules-enabled/50-mod-http-passenger.conf ; fi
+
+# TODO - Install custom configuration files for server here
+
+# Enable the Passenger NGINX module and restart NGINX
 RUN a2enmod passenger && \
   apache2ctl restart
-
+service nginx restart
 # End production httpd additions
 
 # Copy confs
