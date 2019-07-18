@@ -30,7 +30,7 @@ ENV DATASERVICES_VERSION=master
 ENV DATAERVICESAPI_VERSION=master
 #ENV OBSERVATORY_VERSION=1.9.0
 ENV OBSERVATORY_VERSION=master
-# Added for httpd production setup
+# Added for httpd production setup, TODO: add switch to turn on/off
 ENV RAILS_ENV=production
 
 RUN useradd -m -d /home/cartodb -s /bin/bash cartodb && \
@@ -135,6 +135,7 @@ RUN curl https://nodejs.org/dist/v10.15.3/node-v10.15.3-linux-x64.tar.xz |tar -J
   rm -r /tmp/npm-* /root/.npm
 
 # Setting PostgreSQL
+# TODO: add listen command here for production setup (e.g. sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/10/main/postgresql.conf && \)
 RUN sed -i 's/\(peer\|md5\)/trust/' /etc/postgresql/10/main/pg_hba.conf && \
     service postgresql start && \
     createuser publicuser --no-createrole --no-createdb --no-superuser -U postgres && \
@@ -241,10 +242,18 @@ RUN a2enmod passenger && \
 # End production httpd additions
 
 # Copy confs
-ADD ./config/CartoDB-dev.js \
-      /CartoDB-SQL-API/config/environments/development.js
-ADD ./config/WS-dev.js \
-      /Windshaft-cartodb/config/environments/development.js
+# Added for httpd production setup, TODO: add switch to turn on/off
+ADD ./config/CartoDB-prod.js \
+      /CartoDB-SQL-API/config/environments/production.js
+ADD ./config/WS-prod.js \
+      /Windshaft-cartodb/config/environments/production.js
+# Commenting out dev setup, TODO: add switch to turn on/off with above
+# ADD ./config/CartoDB-dev.js \
+#      /CartoDB-SQL-API/config/environments/development.js
+# ADD ./config/WS-dev.js \
+#      /Windshaft-cartodb/config/environments/development.js
+
+# TODO: add switch to enable use of custom config files below from an alternative repo
 ADD ./config/app_config.yml /cartodb/config/app_config.yml
 ADD ./config/database.yml /cartodb/config/database.yml
 ADD ./create_dev_user /cartodb/script/create_dev_user
@@ -267,6 +276,7 @@ RUN mkdir -p /cartodb/log && touch /cartodb/log/users_modifications && \
     chmod +x /cartodb/script/fill_geocoder.sh && \
     chmod +x /cartodb/script/sync_tables_trigger.sh
 
+# TODO: add relevant/additional ports for production access to API: 3000 8080 8181 etc.
 EXPOSE 80
 
 ENV GDAL_DATA /usr/share/gdal/2.2
