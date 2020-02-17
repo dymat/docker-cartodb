@@ -240,8 +240,8 @@ RUN if [ ! -f /etc/nginx/modules-enabled/50-mod-http-passenger.conf ]; then ln -
 
 # Enable the Passenger NGINX module and restart NGINX
 RUN a2enmod passenger && \
-  apache2ctl restart
-service nginx restart
+  apache2ctl restart && \
+  service nginx restart
 # End production httpd additions
 
 # Copy confs
